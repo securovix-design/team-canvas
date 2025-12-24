@@ -190,7 +190,63 @@ export function ProjectBoard({ project, onBack }: ProjectBoardProps) {
       toast({ title: 'Error updating task', description: error.message, variant: 'destructive' });
     } else {
       setTaskDetailOpen(false);
+      // Optimistic update for local state
+      setTasks((prev) =>
+        prev.map((t) => (t.id === taskId ? { ...t, ...data } : t))
+      );
       toast({ title: 'Task updated!' });
+    }
+  };
+
+  const handleTaskMove = async (taskId: string, newStatusId: string) => {
+    // Optimistic update
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, status_id: newStatusId } : t))
+    );
+
+    const { error } = await supabase
+      .from('tasks')
+      .update({ status_id: newStatusId })
+      .eq('id', taskId);
+
+    if (error) {
+      toast({ title: 'Error moving task', description: error.message, variant: 'destructive' });
+      // Revert on error
+      fetchData();
+    }
+  };
+
+  const handleTaskTitleUpdate = async (taskId: string, newTitle: string) => {
+    // Optimistic update
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, title: newTitle } : t))
+    );
+
+    const { error } = await supabase
+      .from('tasks')
+      .update({ title: newTitle })
+      .eq('id', taskId);
+
+    if (error) {
+      toast({ title: 'Error updating task', description: error.message, variant: 'destructive' });
+      fetchData();
+    }
+  };
+
+  const handleStatusNameUpdate = async (statusId: string, newName: string) => {
+    // Optimistic update
+    setStatuses((prev) =>
+      prev.map((s) => (s.id === statusId ? { ...s, name: newName } : s))
+    );
+
+    const { error } = await supabase
+      .from('task_statuses')
+      .update({ name: newName })
+      .eq('id', statusId);
+
+    if (error) {
+      toast({ title: 'Error updating status', description: error.message, variant: 'destructive' });
+      fetchData();
     }
   };
 
@@ -201,6 +257,7 @@ export function ProjectBoard({ project, onBack }: ProjectBoardProps) {
       toast({ title: 'Error deleting task', description: error.message, variant: 'destructive' });
     } else {
       setTaskDetailOpen(false);
+      setTasks((prev) => prev.filter((t) => t.id !== taskId));
       toast({ title: 'Task deleted' });
     }
   };
@@ -246,6 +303,9 @@ export function ProjectBoard({ project, onBack }: ProjectBoardProps) {
           tasks={tasks}
           onAddTask={handleAddTask}
           onTaskClick={handleTaskClick}
+          onTaskMove={handleTaskMove}
+          onTaskTitleUpdate={handleTaskTitleUpdate}
+          onStatusNameUpdate={handleStatusNameUpdate}
         />
       </div>
 
